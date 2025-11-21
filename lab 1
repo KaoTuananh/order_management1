@@ -1,11 +1,59 @@
+import json
+
 class Customer:
-    def __init__(self, customer_id, name, address, phone, contact_person):
-        self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
-        self._name = self.validate_string_field(name, "Name", 100)
-        self._address = self.validate_string_field(address, "Address", 200)
-        self._phone = self.validate_phone(phone)
-        self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
+    def __init__(self, customer_id=None, name=None, address=None, phone=None, contact_person=None, csv_string=None, json_data=None):
+        if csv_string is not None:
+            self._init_from_csv(csv_string)
+        elif json_data is not None:
+            self._init_from_json(json_data)
+        else:
+            self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
+            self._name = self.validate_string_field(name, "Name", 100)
+            self._address = self.validate_string_field(address, "Address", 200)
+            self._phone = self.validate_phone(phone)
+            self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
     
+    def _init_from_csv(self, csv_string):
+        """Конструктор из CSV строки"""
+        if not csv_string or not csv_string.strip():
+            raise ValueError("CSV строка не может быть пустой")
+        
+        parts = csv_string.split(',')
+        if len(parts) != 5:
+            raise ValueError("CSV строка должна содержать 5 полей: customer_id, name, address, phone, contact_person")
+        
+        try:
+            self._customer_id = self.validate_positive_id(int(parts[0].strip()), "Customer_ID")
+            self._name = self.validate_string_field(parts[1].strip(), "Name", 100)
+            self._address = self.validate_string_field(parts[2].strip(), "Address", 200)
+            self._phone = self.validate_phone(parts[3].strip())
+            self._contact_person = self.validate_string_field(parts[4].strip(), "ContactPerson", 100)
+        except ValueError as e:
+            raise ValueError(f"Ошибка парсинга CSV: {e}")
+
+    def _init_from_json(self, json_data):
+        """Конструктор из JSON данных (строка или словарь)"""
+        if isinstance(json_data, str):
+            try:
+                data = json.loads(json_data)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Ошибка формата JSON: {e}")
+        elif isinstance(json_data, dict):
+            data = json_data
+        else:
+            raise ValueError("JSON данные должны быть строкой или словарем")
+        
+        required_fields = ['customer_id', 'name', 'address', 'phone', 'contact_person']
+        for field in required_fields:
+            if field not in data:
+                raise ValueError(f"Отсутствует обязательное поле: {field}")
+        
+        self._customer_id = self.validate_positive_id(data['customer_id'], "Customer_ID")
+        self._name = self.validate_string_field(data['name'], "Name", 100)
+        self._address = self.validate_string_field(data['address'], "Address", 200)
+        self._phone = self.validate_phone(data['phone'])
+        self._contact_person = self.validate_string_field(data['contact_person'], "ContactPerson", 100)
+
     @staticmethod
     def validate_positive_id(value, field_name):
         if not isinstance(value, int):
@@ -86,3 +134,17 @@ class Customer:
     @contact_person.setter
     def contact_person(self, contact_person):
         self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
+
+    def to_csv(self):
+        """Преобразование объекта в CSV строку"""
+        return f"{self.customer_id},{self.name},{self.address},{self.phone},{self.contact_person}"
+
+    def to_json(self):
+        """Преобразование объекта в JSON строку"""
+        return json.dumps({
+            'customer_id': self.customer_id,
+            'name': self.name,
+            'address': self.address,
+            'phone': self.phone,
+            'contact_person': self.contact_person
+        }, ensure_ascii=False, indent=2)
