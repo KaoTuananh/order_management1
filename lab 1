@@ -1,10 +1,61 @@
 class Customer:
     def __init__(self, customer_id, name, address, phone, contact_person):
-        self._customer_id = customer_id
-        self._name = name
-        self._address = address
-        self._phone = phone
-        self._contact_person = contact_person
+        self._customer_id = self.validate_customer_id(customer_id)
+        self._name = self.validate_name(name)
+        self._address = self.validate_address(address)
+        self._phone = self.validate_phone(phone)
+        self._contact_person = self.validate_contact_person(contact_person)
+    
+    @staticmethod
+    def validate_customer_id(customer_id):
+        if not isinstance(customer_id, int):
+            raise ValueError("Customer_ID должен быть целым числом")
+        if customer_id <= 0:
+            raise ValueError("Customer_ID должен быть положительным числом")
+        return customer_id
+
+    @staticmethod
+    def validate_name(name):
+        if not isinstance(name, str):
+            raise ValueError("Name должен быть строкой")
+        if not name.strip():
+            raise ValueError("Name не может быть пустым")
+        if len(name.strip()) > 100:
+            raise ValueError("Name не может быть длиннее 100 символов")
+        return name.strip()
+
+    @staticmethod
+    def validate_address(address):
+        if not isinstance(address, str):
+            raise ValueError("Address должен быть строкой")
+        if not address.strip():
+            raise ValueError("Address не может быть пустым")
+        if len(address.strip()) > 200:
+            raise ValueError("Address не может быть длиннее 200 символов")
+        return address.strip()
+
+    @staticmethod
+    def validate_phone(phone):
+        if not isinstance(phone, str):
+            raise ValueError("Phone должен быть строкой")
+        if not phone.strip():
+            raise ValueError("Phone не может быть пустым")
+        # Базовая проверка формата телефона
+        if len(phone.strip()) < 5:
+            raise ValueError("Phone должен содержать минимум 5 символов")
+        if len(phone.strip()) > 20:
+            raise ValueError("Phone не может быть длиннее 20 символов")
+        return phone.strip()
+
+    @staticmethod
+    def validate_contact_person(contact_person):
+        if not isinstance(contact_person, str):
+            raise ValueError("ContactPerson должен быть строкой")
+        if not contact_person.strip():
+            raise ValueError("ContactPerson не может быть пустым")
+        if len(contact_person.strip()) > 100:
+            raise ValueError("ContactPerson не может быть длиннее 100 символов")
+        return contact_person.strip()
     
     @property
     def customer_id(self):
@@ -12,7 +63,7 @@ class Customer:
 
     @customer_id.setter
     def customer_id(self, customer_id):
-        self._customer_id = customer_id
+        self._customer_id = self.validate_customer_id(customer_id)
 
     @property
     def name(self):
@@ -20,7 +71,7 @@ class Customer:
 
     @name.setter
     def name(self, name):
-        self._name = name
+        self._name = self.validate_name(name)
 
     @property
     def address(self):
@@ -28,7 +79,7 @@ class Customer:
 
     @address.setter
     def address(self, address):
-        self._address = address
+        self._address = self.validate_address(address)
 
     @property
     def phone(self):
@@ -36,7 +87,7 @@ class Customer:
 
     @phone.setter
     def phone(self, phone):
-        self._phone = phone
+        self._phone = self.validate_phone(phone)
 
     @property
     def contact_person(self):
@@ -44,4 +95,4 @@ class Customer:
 
     @contact_person.setter
     def contact_person(self, contact_person):
-        self._contact_person = contact_person
+        self._contact_person = self.validate_contact_person(contact_person)
