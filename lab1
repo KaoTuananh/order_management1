@@ -1,0 +1,47 @@
+class Customer:
+    def __init__(self, customer_id, name, address, phone, contact_person):
+        self._customer_id = customer_id
+        self._name = name
+        self._address = address
+        self._phone = phone
+        self._contact_person = contact_person
+    
+    @property
+    def customer_id(self):
+        return self._customer_id
+
+    @customer_id.setter
+    def customer_id(self, customer_id):
+        self._customer_id = customer_id
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+
+    @property
+    def address(self):
+        return self._address
+
+    @address.setter
+    def address(self, address):
+        self._address = address
+
+    @property
+    def phone(self):
+        return self._phone
+
+    @phone.setter
+    def phone(self, phone):
+        self._phone = phone
+
+    @property
+    def contact_person(self):
+        return self._contact_person
+
+    @contact_person.setter
+    def contact_person(self, contact_person):
+        self._contact_person = contact_person
