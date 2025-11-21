@@ -136,11 +136,10 @@ class Customer:
         self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
 
     def to_csv(self):
-        """Преобразование объекта в CSV строку"""
         return f"{self.customer_id},{self.name},{self.address},{self.phone},{self.contact_person}"
 
     def to_json(self):
-        """Преобразование объекта в JSON строку"""
+       
         return json.dumps({
             'customer_id': self.customer_id,
             'name': self.name,
@@ -148,3 +147,25 @@ class Customer:
             'phone': self.phone,
             'contact_person': self.contact_person
         }, ensure_ascii=False, indent=2)
+
+   
+    def __str__(self):
+        return (f"Customer {{\n"
+                f"  Customer_ID={self.customer_id},\n"
+                f"  Name='{self.name}',\n"
+                f"  Address='{self.address}',\n"
+                f"  Phone='{self.phone}',\n"
+                f"  ContactPerson='{self.contact_person}'\n"
+                f"}}")
+
+    def to_short_string(self):
+        return f"Customer{{id={self.customer_id}, name='{self.name}', phone='{self.phone}'}}"
+
+    def __eq__(self, other):
+        if not isinstance(other, Customer):
+            return False
+        return (self.customer_id == other.customer_id and
+                self.name == other.name and
+                self.address == other.address and
+                self.phone == other.phone and
+                self.contact_person == other.contact_person)
