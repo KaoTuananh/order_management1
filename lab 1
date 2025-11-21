@@ -1,11 +1,13 @@
+import json
+
 class CustomerBase:
     def __init__(self, customer_id, name, phone):
-        self._customer_id = self._validate_positive_id(customer_id, "Customer_ID")
-        self._name = self._validate_string_field(name, "Name", 100)
-        self._phone = self._validate_phone(phone)
+        self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
+        self._name = self.validate_string_field(name, "Name", 100)
+        self._phone = self.validate_phone(phone)
     
     @staticmethod
-    def _validate_positive_id(value, field_name):
+    def validate_positive_id(value, field_name):
         if not isinstance(value, int):
             raise ValueError(f"{field_name} должен быть целым числом")
         if value <= 0:
@@ -13,7 +15,7 @@ class CustomerBase:
         return value
 
     @staticmethod
-    def _validate_string_field(value, field_name, max_length):
+    def validate_string_field(value, field_name, max_length):
         if not isinstance(value, str):
             raise ValueError(f"{field_name} должен быть строкой")
         
@@ -28,7 +30,7 @@ class CustomerBase:
         return value
 
     @staticmethod
-    def _validate_phone(phone):
+    def validate_phone(phone):
         if not isinstance(phone, str):
             raise ValueError("Phone должен быть строкой")
         
@@ -66,3 +68,137 @@ class CustomerBase:
         return (self.customer_id == other.customer_id and
                 self.name == other.name and
                 self.phone == other.phone)
+
+
+class Customer(CustomerBase):
+    def __init__(self, customer_id=None, name=None, address=None, phone=None, contact_person=None, csv_string=None, json_data=None):
+        if csv_string is not None:
+            self._init_from_csv(csv_string)
+        elif json_data is not None:
+            self._init_from_json(json_data)
+        else:
+            # Вызов конструктора родительского класса для общих полей
+            super().__init__(customer_id, name, phone)
+            # Инициализация дополнительных полей
+            self._address = self.validate_string_field(address, "Address", 200)
+            self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
+    
+    def _init_from_csv(self, csv_string):
+        """Конструктор из CSV строки"""
+        if not csv_string or not csv_string.strip():
+            raise ValueError("CSV строка не может быть пустой")
+        
+        parts = csv_string.split(',')
+        if len(parts) != 5:
+            raise ValueError("CSV строка должна содержать 5 полей: customer_id, name, address, phone, contact_person")
+        
+        try:
+            # Использование методов валидации из родительского класса
+            customer_id = self.validate_positive_id(int(parts[0].strip()), "Customer_ID")
+            name = self.validate_string_field(parts[1].strip(), "Name", 100)
+            phone = self.validate_phone(parts[3].strip())
+            
+            # Вызов конструктора родительского класса
+            super().__init__(customer_id, name, phone)
+            
+            # Инициализация дополнительных полей
+            self._address = self.validate_string_field(parts[2].strip(), "Address", 200)
+            self._contact_person = self.validate_string_field(parts[4].strip(), "ContactPerson", 100)
+        except ValueError as e:
+            raise ValueError(f"Ошибка парсинга CSV: {e}")
+
+    def _init_from_json(self, json_data):
+        """Конструктор из JSON данных (строка или словарь)"""
+        if isinstance(json_data, str):
+            try:
+                data = json.loads(json_data)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Ошибка формата JSON: {e}")
+        elif isinstance(json_data, dict):
+            data = json_data
+        else:
+            raise ValueError("JSON данные должны быть строкой или словарем")
+        
+        required_fields = ['customer_id', 'name', 'address', 'phone', 'contact_person']
+        for field in required_fields:
+            if field not in data:
+                raise ValueError(f"Отсутствует обязательное поле: {field}")
+        
+        # Использование методов валидации из родительского класса
+        customer_id = self.validate_positive_id(data['customer_id'], "Customer_ID")
+        name = self.validate_string_field(data['name'], "Name", 100)
+        phone = self.validate_phone(data['phone'])
+        
+        # Вызов конструктора родительского класса
+        super().__init__(customer_id, name, phone)
+        
+        # Инициализация дополнительных полей
+        self._address = self.validate_string_field(data['address'], "Address", 200)
+        self._contact_person = self.validate_string_field(data['contact_person'], "ContactPerson", 100)
+
+    @property
+    def address(self):
+        return self._address
+
+    @address.setter
+    def address(self, address):
+        self._address = self.validate_string_field(address, "Address", 200)
+
+    @property
+    def contact_person(self):
+        return self._contact_person
+
+    @contact_person.setter
+    def contact_person(self, contact_person):
+        self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
+
+    # Сеттеры для полей родительского класса
+    @CustomerBase.customer_id.setter
+    def customer_id(self, customer_id):
+        self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
+
+    @CustomerBase.name.setter
+    def name(self, name):
+        self._name = self.validate_string_field(name, "Name", 100)
+
+    @CustomerBase.phone.setter
+    def phone(self, phone):
+        self._phone = self.validate_phone(phone)
+
+    def to_csv(self):
+        """Преобразование объекта в CSV строку"""
+        return f"{self.customer_id},{self.name},{self.address},{self.phone},{self.contact_person}"
+
+    def to_json(self):
+        """Преобразование объекта в JSON строку"""
+        return json.dumps({
+            'customer_id': self.customer_id,
+            'name': self.name,
+            'address': self.address,
+            'phone': self.phone,
+            'contact_person': self.contact_person
+        }, ensure_ascii=False, indent=2)
+
+    # Полная версия объекта
+    def __str__(self):
+        return (f"Customer {{\n"
+                f"  Customer_ID={self.customer_id},\n"
+                f"  Name='{self.name}',\n"
+                f"  Address='{self.address}',\n"
+                f"  Phone='{self.phone}',\n"
+                f"  ContactPerson='{self.contact_person}'\n"
+                f"}}")
+
+    # Краткая версия объекта
+    def to_short_string(self):
+        return f"Customer{{id={self.customer_id}, name='{self.name}', phone='{self.phone}'}}"
+
+    # Сравнение объектов на равенство
+    def __eq__(self, other):
+        if not isinstance(other, Customer):
+            return False
+        return (self.customer_id == other.customer_id and
+                self.name == other.name and
+                self.address == other.address and
+                self.phone == other.phone and
+                self.contact_person == other.contact_person)
