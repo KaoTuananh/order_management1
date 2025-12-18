@@ -1,11 +1,12 @@
 import json
 
+
 class CustomerBase:
     def __init__(self, customer_id, name, phone):
         self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
         self._name = self.validate_string_field(name, "Name", 100)
         self._phone = self.validate_phone(phone)
-    
+
     @staticmethod
     def validate_positive_id(value, field_name):
         if not isinstance(value, int):
@@ -18,35 +19,35 @@ class CustomerBase:
     def validate_string_field(value, field_name, max_length):
         if not isinstance(value, str):
             raise ValueError(f"{field_name} должен быть строкой")
-        
+
         value = value.strip()
-        
+
         if not value:
             raise ValueError(f"{field_name} не может быть пустым")
-        
+
         if len(value) > max_length:
             raise ValueError(f"{field_name} не может быть длиннее {max_length} символов")
-        
+
         return value
 
     @staticmethod
     def validate_phone(phone):
         if not isinstance(phone, str):
             raise ValueError("Phone должен быть строкой")
-        
+
         phone = phone.strip()
-        
+
         if not phone:
             raise ValueError("Phone не может быть пустым")
-        
+
         if len(phone) < 5:
             raise ValueError("Phone должен содержать минимум 5 символов")
-        
+
         if len(phone) > 20:
             raise ValueError("Phone не может быть длиннее 20 символов")
-        
+
         return phone
-    
+
     @property
     def customer_id(self):
         return self._customer_id
@@ -71,7 +72,8 @@ class CustomerBase:
 
 
 class Customer(CustomerBase):
-    def __init__(self, customer_id=None, name=None, address=None, phone=None, contact_person=None, csv_string=None, json_data=None):
+    def __init__(self, customer_id=None, name=None, address=None, phone=None, contact_person=None, csv_string=None,
+                 json_data=None):
         if csv_string is not None:
             self._init_from_csv(csv_string)
         elif json_data is not None:
@@ -82,25 +84,25 @@ class Customer(CustomerBase):
             # Инициализация дополнительных полей
             self._address = self.validate_string_field(address, "Address", 200)
             self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
-    
+
     def _init_from_csv(self, csv_string):
         """Конструктор из CSV строки"""
         if not csv_string or not csv_string.strip():
             raise ValueError("CSV строка не может быть пустой")
-        
+
         parts = csv_string.split(',')
         if len(parts) != 5:
             raise ValueError("CSV строка должна содержать 5 полей: customer_id, name, address, phone, contact_person")
-        
+
         try:
             # Использование методов валидации из родительского класса
             customer_id = self.validate_positive_id(int(parts[0].strip()), "Customer_ID")
             name = self.validate_string_field(parts[1].strip(), "Name", 100)
             phone = self.validate_phone(parts[3].strip())
-            
+
             # Вызов конструктора родительского класса
             super().__init__(customer_id, name, phone)
-            
+
             # Инициализация дополнительных полей
             self._address = self.validate_string_field(parts[2].strip(), "Address", 200)
             self._contact_person = self.validate_string_field(parts[4].strip(), "ContactPerson", 100)
@@ -118,20 +120,20 @@ class Customer(CustomerBase):
             data = json_data
         else:
             raise ValueError("JSON данные должны быть строкой или словарем")
-        
+
         required_fields = ['customer_id', 'name', 'address', 'phone', 'contact_person']
         for field in required_fields:
             if field not in data:
                 raise ValueError(f"Отсутствует обязательное поле: {field}")
-        
+
         # Использование методов валидации из родительского класса
         customer_id = self.validate_positive_id(data['customer_id'], "Customer_ID")
         name = self.validate_string_field(data['name'], "Name", 100)
         phone = self.validate_phone(data['phone'])
-        
+
         # Вызов конструктора родительского класса
         super().__init__(customer_id, name, phone)
-        
+
         # Инициализация дополнительных полей
         self._address = self.validate_string_field(data['address'], "Address", 200)
         self._contact_person = self.validate_string_field(data['contact_person'], "ContactPerson", 100)
@@ -152,16 +154,28 @@ class Customer(CustomerBase):
     def contact_person(self, contact_person):
         self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
 
-    # Сеттеры для полей родительского класса
-    @CustomerBase.customer_id.setter
+    # Сеттеры для полей родительского класса - ИСПРАВЛЕННЫЙ ВАРИАНТ
+    @property
+    def customer_id(self):
+        return self._customer_id
+
+    @customer_id.setter
     def customer_id(self, customer_id):
         self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
 
-    @CustomerBase.name.setter
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
     def name(self, name):
         self._name = self.validate_string_field(name, "Name", 100)
 
-    @CustomerBase.phone.setter
+    @property
+    def phone(self):
+        return self._phone
+
+    @phone.setter
     def phone(self, phone):
         self._phone = self.validate_phone(phone)
 
@@ -179,19 +193,19 @@ class Customer(CustomerBase):
             'contact_person': self.contact_person
         }, ensure_ascii=False, indent=2)
 
-    # Полная версия объекта
+    # Полная версия объекта - ИСПРАВЛЕНО для корректного отображения кавычек
     def __str__(self):
         return (f"Customer {{\n"
                 f"  Customer_ID={self.customer_id},\n"
-                f"  Name='{self.name}',\n"
-                f"  Address='{self.address}',\n"
-                f"  Phone='{self.phone}',\n"
-                f"  ContactPerson='{self.contact_person}'\n"
+                f"  Name=\"{self.name}\",\n"  # Используем двойные кавычки
+                f"  Address=\"{self.address}\",\n"
+                f"  Phone=\"{self.phone}\",\n"
+                f"  ContactPerson=\"{self.contact_person}\"\n"
                 f"}}")
 
     # Краткая версия объекта
     def to_short_string(self):
-        return f"Customer{{id={self.customer_id}, name='{self.name}', phone='{self.phone}'}}"
+        return f"Customer{{id={self.customer_id}, name=\"{self.name}\", phone=\"{self.phone}\"}}"
 
     # Сравнение объектов на равенство
     def __eq__(self, other):
@@ -202,3 +216,246 @@ class Customer(CustomerBase):
                 self.address == other.address and
                 self.phone == other.phone and
                 self.contact_person == other.contact_person)
+
+
+# Код для ввода и вывода (не трогает классы выше)
+if __name__ == "__main__":
+    print("Добро пожаловать в демонстрацию классов клиентов (с перегрузкой конструкторов)!")
+    print("ОГРАНИЧЕНИЯ ВВОДА:")
+    print("- Customer_ID: положительное целое число")
+    print("- Name, Address, ContactPerson: непустые строки (макс. 100, 200, 100 символов)")
+    print("- Phone: непустая строка, 5-20 символов")
+
+    print("\n" + "=" * 60)
+
+    # 1. Автоматическое создание объектов (hardcoded)
+    print("1. АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ОБЪЕКТОВ (hardcoded)")
+    print("-" * 40)
+
+    # Создание Customer обычным способом (5 аргументов) - hardcoded
+    print("1.1. Создание объекта Customer обычным способом (5 аргументов)")
+    try:
+        customer1 = Customer(1, "ООО 'Ромашка'", "г. Москва, ул. Ленина, д. 1", "+7-495-123-45-67",
+                             "Иванов Иван Иванович")
+        print(f"Успешно создан объект:")
+        print(f"Полная версия:\n{customer1}")
+        print(f"Краткая версия: {customer1.to_short_string()}")
+        print(f"CSV представление: {customer1.to_csv()}")
+        print(f"JSON представление:\n{customer1.to_json()}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    # Создание второго Customer для сравнения
+    print("\n1.2. Создание второго объекта Customer для сравнения")
+    try:
+        customer2 = Customer(2, "ИП Петров П.П.", "г. Санкт-Петербург, Невский пр-т, д. 10", "+7-812-987-65-43",
+                             "Петрова Мария Сергеевна")
+        print(f"Успешно создан объект:")
+        print(f"Краткая версия: {customer2.to_short_string()}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    # Создание CustomerBase
+    print("\n1.3. Создание объекта CustomerBase (родительский класс)")
+    try:
+        customer_base = CustomerBase(100, "Тестовая компания", "+7-999-888-77-66")
+        print(f"Успешно создан объект: {customer_base}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    print("\n" + "=" * 60)
+
+    # 2. Создание объектов по пунктам (ввод с клавиатуры)
+    print("2. СОЗДАНИЕ ОБЪЕКТОВ ПО ПУНКТАМ (ввод с клавиатуры)")
+    print("-" * 40)
+
+    # Создание Customer с вводом полей по отдельности
+    print("2.1. Создание объекта Customer с вводом полей по отдельности")
+    try:
+        customer_id = int(input("Введите Customer_ID (целое положительное число): ").strip())
+        name = input("Введите название компании: ").strip()
+        address = input("Введите адрес: ").strip()
+        phone = input("Введите телефон: ").strip()
+        contact_person = input("Введите контактное лицо: ").strip()
+
+        customer_input = Customer(customer_id, name, address, phone, contact_person)
+        print(f"\nУспешно создан объект:")
+        print(f"Полная версия:\n{customer_input}")
+        print(f"Краткая версия: {customer_input.to_short_string()}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    print("\n" + "=" * 60)
+
+    # 3. Обычная перегрузка конструктора (CSV строка)
+    print("3. ПЕРЕГРУЗКА КОНСТРУКТОРА (CSV строка)")
+    print("-" * 40)
+
+    # Создание Customer из CSV строки через перегрузку конструктора
+    print("3.1. Создание объекта Customer из CSV строки (формат: customer_id,name,address,phone,contact_person)")
+    print("Пример: 10,ООО 'Луч',г. Казань,ул. Баумана,1,+7-843-111-22-33,Сидоров А.А.")
+    csv_input = input("Введите CSV строку: ")
+
+    try:
+        customer_csv = Customer(csv_string=csv_input)
+        print(f"\nУспешно создан объект из CSV строки:")
+        print(f"Полная версия:\n{customer_csv}")
+        print(f"CSV строка была: {csv_input}")
+        print(f"Обратно в CSV: {customer_csv.to_csv()}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    print("\n" + "=" * 60)
+
+    # 4. Перегрузка конструктора (JSON)
+    print("4. ПЕРЕГРУЗКА КОНСТРУКТОРА (JSON)")
+    print("-" * 40)
+
+    # Создание Customer из JSON строки через перегрузку конструктора
+    print("4.1. Создание объекта Customer из JSON строки")
+    print(
+        '''Пример: {"customer_id": 20, "name": "АО 'Строймаш'", "address": "г. Екатеринбург", "phone": "+7-343-444-55-66", "contact_person": "Кузнецов В.В."}''')
+    json_input = input("Введите JSON строку: ")
+
+    try:
+        customer_json = Customer(json_data=json_input)
+        print(f"\nУспешно создан объект из JSON строки:")
+        print(f"Полная версия:\n{customer_json}")
+        print(f"JSON строка была:\n{json_input}")
+        print(f"Обратно в JSON:\n{customer_json.to_json()}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    # Создание Customer из JSON словаря
+    print("\n4.2. Создание объекта Customer из JSON словаря (Python dict)")
+    try:
+        json_dict = {
+            'customer_id': 30,
+            'name': "ЗАО 'Технологии'",
+            'address': "г. Новосибирск, ул. Кирова, 5",
+            'phone': "+7-383-777-88-99",
+            'contact_person': "Смирнова Ольга Петровна"
+        }
+        customer_dict = Customer(json_data=json_dict)
+        print(f"Успешно создан объект из словаря:")
+        print(f"Полная версия:\n{customer_dict}")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+    print("\n" + "=" * 60)
+
+    # 5. Работа с файлами
+    print("5. РАБОТА С ФАЙЛАМИ")
+    print("-" * 40)
+
+    # Создание JSON файла для теста
+    print("5.1. Создание тестового JSON файла")
+    import os
+
+    test_json_content = '''{
+  "customer_id": 99,
+  "name": "ООО 'Файловая компания'",
+  "address": "г. Владивосток, ул. Луговая, 15",
+  "phone": "+7-423-222-33-44",
+  "contact_person": "Файлов Ф.Ф."
+}'''
+
+    test_file_path = "test_customer.json"
+    try:
+        with open(test_file_path, 'w', encoding='utf-8') as f:
+            f.write(test_json_content)
+        print(f"Файл {test_file_path} успешно создан")
+
+        # Чтение из файла и создание объекта
+        print("\n5.2. Чтение JSON из файла и создание объекта")
+        with open(test_file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+
+        customer_from_file = Customer(json_data=file_content)
+        print(f"Успешно создан объект из файла {test_file_path}:")
+        print(f"Полная версия:\n{customer_from_file}")
+
+        # Удаление тестового файла
+        os.remove(test_file_path)
+        print(f"\nТестовый файл {test_file_path} удален")
+
+    except Exception as e:
+        print(f"Ошибка при работе с файлом: {e}")
+
+    print("\n" + "=" * 60)
+
+    # 6. Демонстрация дополнительных возможностей
+    print("6. ДОПОЛНИТЕЛЬНЫЕ ВОЗМОЖНОСТИ")
+    print("-" * 40)
+
+    # Сравнение объектов (__eq__) - ИСПРАВЛЕНО: проверка на существование
+    if 'customer1' in locals() and 'customer2' in locals():
+        print("6.1. Проверка перегрузки __eq__ (сравнение объектов)")
+        print(f"Customer1 == Customer2: {customer1 == customer2}")
+        print(f"Customer1 != Customer2: {customer1 != customer2}")
+
+        # Создание копии customer1 для сравнения
+        try:
+            customer1_copy = Customer(1, "ООО 'Ромашка'", "г. Москва, ул. Ленина, д. 1", "+7-495-123-45-67",
+                                      "Иванов Иван Иванович")
+            print(f"\nСоздана копия Customer1")
+            print(f"Customer1 == Customer1_copy: {customer1 == customer1_copy}")
+            print(f"Customer1 != Customer1_copy: {customer1 != customer1_copy}")
+        except ValueError as e:
+            print(f"Ошибка: {e}")
+    else:
+        print("6.1. Пропущено: необходимо создать customer1 и customer2")
+
+    # Демонстрация свойств и сеттеров - ИСПРАВЛЕНО
+    if 'customer1' in locals():
+        print("\n6.2. Демонстрация свойств и сеттеров")
+        print(f"Текущие данные Customer1:")
+        print(f"  ID: {customer1.customer_id}")
+        print(f"  Название: {customer1.name}")
+        print(f"  Адрес: {customer1.address}")
+        print(f"  Телефон: {customer1.phone}")
+        print(f"  Контактное лицо: {customer1.contact_person}")
+
+        # Изменение данных - ИСПРАВЛЕННЫЕ СЕТТЕРЫ
+        print("\nИзменение данных Customer1:")
+        try:
+            old_name = customer1.name
+            old_phone = customer1.phone
+
+            customer1.name = "ООО 'Новое название'"
+            customer1.phone = "+7-495-999-88-77"
+
+            print(f"  Было название: '{old_name}'")
+            print(f"  Стало название: '{customer1.name}'")
+            print(f"  Было телефон: '{old_phone}'")
+            print(f"  Стало телефон: '{customer1.phone}'")
+        except ValueError as e:
+            print(f"Ошибка при изменении: {e}")
+    else:
+        print("\n6.2. Пропущено: необходимо создать customer1")
+
+    # Проверка валидации
+    print("\n6.3. Проверка валидации (попытка создания невалидного объекта)")
+    print("Попытка создать Customer с отрицательным ID:")
+    try:
+        invalid_customer = Customer(-1, "Тест", "Адрес", "123", "Контак")
+        print(f"Объект создан: {invalid_customer}")
+    except ValueError as e:
+        print(f"Ошибка (ожидаемо): {e}")
+
+    print("\nПопытка создать Customer с пустым именем:")
+    try:
+        invalid_customer = Customer(999, "", "Адрес", "12345", "Контак")
+        print(f"Объект создан: {invalid_customer}")
+    except ValueError as e:
+        print(f"Ошибка (ожидаемо): {e}")
+
+    print("\nПопытка создать Customer с очень коротким телефоном:")
+    try:
+        invalid_customer = Customer(999, "Тест", "Адрес", "123", "Контак")
+        print(f"Объект создан: {invalid_customer}")
+    except ValueError as e:
+        print(f"Ошибка (ожидаемо): {e}")
+
+    print("\n" + "=" * 60)
+    print("Демонстрация завершена!")
