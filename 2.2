@@ -1,0 +1,232 @@
+import json
+import yaml
+import os
+
+
+# ЛР1 (Базовые сущности)
+
+class CustomerBase:
+    def __init__(self, customer_id, name, phone):
+        self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
+        self._name = self.validate_string_field(name, "Name", 100)
+        self._phone = self.validate_phone(phone)
+
+    @staticmethod
+    def validate_positive_id(value, field_name):
+        if not isinstance(value, int):
+            raise ValueError(f"{field_name} должен быть целым числом")
+        if value <= 0:
+            raise ValueError(f"{field_name} должен быть положительным числом")
+        return value
+
+    @staticmethod
+    def validate_string_field(value, field_name, max_length):
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} должен быть строкой")
+        value = value.strip()
+        if not value:
+            raise ValueError(f"{field_name} не может быть пустым")
+        if len(value) > max_length:
+            raise ValueError(f"{field_name} не может быть длиннее {max_length} символов")
+        return value
+
+    @staticmethod
+    def validate_phone(phone):
+        if not isinstance(phone, str):
+            raise ValueError("Phone должен быть строкой")
+        phone = phone.strip()
+        if not phone:
+            raise ValueError("Phone не может быть пустым")
+        if len(phone) < 5 or len(phone) > 20:
+            raise ValueError("Phone должен быть от 5 до 20 символов")
+        return phone
+
+    @property
+    def customer_id(self):
+        return self._customer_id
+
+    @customer_id.setter
+    def customer_id(self, value):
+        self._customer_id = self.validate_positive_id(value, "Customer_ID")
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def phone(self):
+        return self._phone
+
+    def to_short_string(self):
+        return f"ID: {self.customer_id}, Name: {self.name}, Phone: {self.phone}"
+
+
+class Customer(CustomerBase):
+    def __init__(self, customer_id=1, name="Temp", address="Temp", phone="12345", contact_person="Temp",
+                 json_data=None):
+        if json_data is not None:
+            self._init_from_json(json_data)
+        else:
+            super().__init__(customer_id, name, phone)
+            self._address = self.validate_string_field(address, "Address", 200)
+            self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
+
+    def _init_from_json(self, json_data):
+        data = json.loads(json_data) if isinstance(json_data, str) else json_data
+        super().__init__(data['customer_id'], data['name'], data['phone'])
+        self._address = self.validate_string_field(data['address'], "Address", 200)
+        self._contact_person = self.validate_string_field(data['contact_person'], "ContactPerson", 100)
+
+    @property
+    def address(self):
+        return self._address
+
+    @property
+    def contact_person(self):
+        return self._contact_person
+
+    def to_json(self):
+        return json.dumps({
+            'customer_id': self.customer_id,
+            'name': self.name,
+            'address': self.address,
+            'phone': self.phone,
+            'contact_person': self.contact_person
+        }, ensure_ascii=False)
+
+    def __str__(self):
+        return f"Customer[ID={self.customer_id}, Name={self.name}]"
+
+#ЛР2 (Репозитории)
+
+class Customer_rep_json:
+    def __init__(self, file_path):
+        self.__file_path = file_path
+        self.__data_list = []
+        self.read_from_file()
+
+    def read_from_file(self):
+        if os.path.exists(self.__file_path):
+            try:
+                with open(self.__file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if content:
+                        items = json.loads(content)
+                        self.__data_list = [Customer(json_data=item) for item in items]
+            except Exception:
+                self.__data_list = []
+
+    def write_to_file(self):
+        with open(self.__file_path, 'w', encoding='utf-8') as f:
+            data = [json.loads(c.to_json()) for c in self.__data_list]
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+    def get_by_id(self, c_id):
+        return next((c for c in self.__data_list if c.customer_id == c_id), None)
+
+    def get_k_n_short_list(self, k, n):
+        start = (k - 1) * n
+        return [c.to_short_string() for c in self.__data_list[start:start + n]]
+
+    def sort_by_name(self):
+        self.__data_list.sort(key=lambda x: x.name.lower())
+
+    def add(self, new_customer):
+        max_id = max([c.customer_id for c in self.__data_list], default=0)
+        new_customer.customer_id = max_id + 1
+        self.__data_list.append(new_customer)
+
+    def replace_by_id(self, c_id, new_customer):
+        for i, c in enumerate(self.__data_list):
+            if c.customer_id == c_id:
+                new_customer.customer_id = c_id
+                self.__data_list[i] = new_customer
+                return True
+        return False
+
+    def delete_by_id(self, c_id):
+        self.__data_list = [c for c in self.__data_list if c.customer_id != c_id]
+
+    def get_count(self):
+        return len(self.__data_list)
+
+
+class Customer_rep_yaml:
+    def __init__(self, file_path):
+        self.__file_path = file_path
+        self.__data_list = []
+        self.read_from_file()
+
+    def read_from_file(self):
+        if os.path.exists(self.__file_path):
+            try:
+                with open(self.__file_path, 'r', encoding='utf-8') as f:
+                    items = yaml.safe_load(f)
+                    if items:
+                        self.__data_list = [Customer(json_data=item) for item in items]
+            except Exception:
+                self.__data_list = []
+
+    def write_to_file(self):
+        with open(self.__file_path, 'w', encoding='utf-8') as f:
+            data = [json.loads(c.to_json()) for c in self.__data_list]
+            yaml.dump(data, f, allow_unicode=True, sort_keys=False)
+
+    # Методы логики идентичны JSON (пункты c-i)
+    def get_by_id(self, c_id):
+        return next((c for c in self.__data_list if c.customer_id == c_id), None)
+
+    def get_k_n_short_list(self, k, n):
+        start = (k - 1) * n
+        return [c.to_short_string() for c in self.__data_list[start:start + n]]
+
+    def sort_by_name(self):
+        self.__data_list.sort(key=lambda x: x.name.lower())
+
+    def add(self, new_customer):
+        max_id = max([c.customer_id for c in self.__data_list], default=0)
+        new_customer.customer_id = max_id + 1
+        self.__data_list.append(new_customer)
+
+    def replace_by_id(self, c_id, new_customer):
+        for i, c in enumerate(self.__data_list):
+            if c.customer_id == c_id:
+                new_customer.customer_id = c_id
+                self.__data_list[i] = new_customer
+                return True
+        return False
+
+    def delete_by_id(self, c_id):
+        self.__data_list = [c for c in self.__data_list if c.customer_id != c_id]
+
+    def get_count(self):
+        return len(self.__data_list)
+
+
+# ЛР2 (Демонстрация)
+
+if __name__ == "__main__":
+    print("ТЕСТ JSON ")
+    repo_json = Customer_rep_json("data.json")
+    repo_json.add(Customer(1, "Альфа", "Москва", "+7911", "Иван"))
+    repo_json.write_to_file()
+    print(f"Записей в JSON: {repo_json.get_count()}")
+
+    print("\n ТЕСТ YAML ")
+    repo_yaml = Customer_rep_yaml("data.yaml")
+
+    # f. Добавление
+    repo_yaml.add(Customer(1, "Экспорт Лес", "Иркутск", "+73952111222", "Сергей"))
+    repo_yaml.add(Customer(1, "Авиа Снаб", "Москва", "+74950000000", "Мария"))
+
+    # e. Сортировка
+    repo_yaml.sort_by_name()
+
+    # b. Запись
+    repo_yaml.write_to_file()
+
+    # d. Короткий список
+    print("Краткий список из YAML:")
+    for item in repo_yaml.get_k_n_short_list(1, 5):
+        print(item)
+
