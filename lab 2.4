@@ -1,0 +1,148 @@
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import json
+import os
+from abc import ABC, abstractmethod
+
+
+# Сущности
+
+class CustomerBase:
+    def __init__(self, customer_id, name, phone):
+        self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
+        self._name = self.validate_string_field(name, "Name", 100)
+        self._phone = self.validate_phone(phone)
+
+    @staticmethod
+    def validate_positive_id(value, field_name):
+        if not isinstance(value, int): return 1  # Для БД-версии позволяем временный ID
+        return value
+
+    @staticmethod
+    def validate_string_field(value, field_name, max_length):
+        return str(value).strip()
+
+    @staticmethod
+    def validate_phone(phone):
+        return str(phone).strip()
+
+    @property
+    def customer_id(self): return self._customer_id
+
+    @customer_id.setter
+    def customer_id(self, value): self._customer_id = value
+
+    @property
+    def name(self): return self._name
+
+    @property
+    def phone(self): return self._phone
+
+    def to_short_string(self):
+        return f"ID: {self.customer_id}, Name: {self.name}, Phone: {self.phone}"
+
+
+class Customer(CustomerBase):
+    def __init__(self, customer_id=1, name="Temp", address="Temp", phone="123", contact_person="Temp", json_data=None):
+        if json_data:
+            super().__init__(json_data['customer_id'], json_data['name'], json_data['phone'])
+            self._address = json_data['address']
+            self._contact_person = json_data['contact_person']
+        else:
+            super().__init__(customer_id, name, phone)
+            self._address = address
+            self._contact_person = contact_person
+
+    @property
+    def address(self):
+        return self._address
+
+    @property
+    def contact_person(self):
+        return self._contact_person
+
+
+# Базовый класс и DB Репозиторий
+
+class Customer_rep_base(ABC):
+    def __init__(self):
+        self._data_list = []
+
+    @abstractmethod
+    def get_by_id(self, c_id): pass
+
+    @abstractmethod
+    def add(self, obj): pass
+
+
+class Customer_rep_DB(Customer_rep_base):
+    def __init__(self, db_config):
+        super().__init__()
+        self._db_config = db_config
+
+    def _get_connection(self):
+        return psycopg2.connect(**self._db_config)
+
+    def get_by_id(self, c_id):
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM customers WHERE customer_id = %s", (c_id,))
+                row = cur.fetchone()
+                return Customer(json_data=row) if row else None
+
+    def get_k_n_short_list(self, k, n):
+        offset = (k - 1) * n
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM customers ORDER BY customer_id LIMIT %s OFFSET %s", (n, offset))
+                rows = cur.fetchall()
+                return [Customer(json_data=row).to_short_string() for row in rows]
+
+    def add(self, new_customer):
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO customers (name, address, phone, contact_person) VALUES (%s, %s, %s, %s) RETURNING customer_id",
+                    (new_customer.name, new_customer.address, new_customer.phone, new_customer.contact_person)
+                )
+                new_customer.customer_id = cur.fetchone()[0]
+            conn.commit()
+
+    def get_count(self):
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM customers")
+                return cur.fetchone()[0]
+
+
+
+
+if __name__ == "__main__":
+    # Настройки вашей БД (проверьте пароль!)
+    config = {
+        "host": "localhost",
+        "database": "my_lab_db",
+        "user": "postgres",
+        "password": "Kkkrasnodar2014",
+        "port": "5432"
+    }
+
+    try:
+        repo = Customer_rep_DB(config)
+
+        # 1. Добавление
+        print("Добавляем тестового клиента...")
+        new_obj = Customer(name="ООО База", address="Город", phone="111", contact_person="Иван")
+        repo.add(new_obj)
+        print(f"Успешно! Присвоен ID: {new_obj.customer_id}")
+
+        # 2. Количество
+        print(f"Всего записей в БД: {repo.get_count()}")
+
+        # 3. Список
+        print("Первые 5 записей:")
+        for item in repo.get_k_n_short_list(1, 5):
+            print(item)
+
+    except Exception as e:
+        print(f"Ошибка: {e}")
