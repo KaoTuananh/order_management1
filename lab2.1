@@ -1,0 +1,212 @@
+import json
+import os
+
+# ЛР1 (Сущности)
+
+class CustomerBase:
+    def __init__(self, customer_id, name, phone):
+        self._customer_id = self.validate_positive_id(customer_id, "Customer_ID")
+        self._name = self.validate_string_field(name, "Name", 100)
+        self._phone = self.validate_phone(phone)
+
+    @staticmethod
+    def validate_positive_id(value, field_name):
+        if not isinstance(value, int):
+            raise ValueError(f"{field_name} должен быть целым числом")
+        if value <= 0:
+            raise ValueError(f"{field_name} должен быть положительным числом")
+        return value
+
+    @staticmethod
+    def validate_string_field(value, field_name, max_length):
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} должен быть строкой")
+        value = value.strip()
+        if not value:
+            raise ValueError(f"{field_name} не может быть пустым")
+        if len(value) > max_length:
+            raise ValueError(f"{field_name} не может быть длиннее {max_length} символов")
+        return value
+
+    @staticmethod
+    def validate_phone(phone):
+        if not isinstance(phone, str):
+            raise ValueError("Phone должен быть строкой")
+        phone = phone.strip()
+        if not phone:
+            raise ValueError("Phone не может быть пустым")
+        if len(phone) < 5 or len(phone) > 20:
+            raise ValueError("Phone должен быть от 5 до 20 символов")
+        return phone
+
+    @property
+    def customer_id(self):
+        return self._customer_id
+
+    @customer_id.setter
+    def customer_id(self, value):
+        self._customer_id = self.validate_positive_id(value, "Customer_ID")
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def phone(self):
+        return self._phone
+
+    def to_short_string(self):
+        return f"ID: {self.customer_id}, Name: {self.name}, Phone: {self.phone}"
+
+
+class Customer(CustomerBase):
+    def __init__(self, customer_id=1, name="Temp", address="Temp", phone="12345", contact_person="Temp",
+                 json_data=None):
+        if json_data is not None:
+            self._init_from_json(json_data)
+        else:
+            super().__init__(customer_id, name, phone)
+            self._address = self.validate_string_field(address, "Address", 200)
+            self._contact_person = self.validate_string_field(contact_person, "ContactPerson", 100)
+
+    def _init_from_json(self, json_data):
+        data = json.loads(json_data) if isinstance(json_data, str) else json_data
+        super().__init__(data['customer_id'], data['name'], data['phone'])
+        self._address = self.validate_string_field(data['address'], "Address", 200)
+        self._contact_person = self.validate_string_field(data['contact_person'], "ContactPerson", 100)
+
+    @property
+    def address(self):
+        return self._address
+
+    @property
+    def contact_person(self):
+        return self._contact_person
+
+    def to_json(self):
+        return json.dumps({
+            'customer_id': self.customer_id,
+            'name': self.name,
+            'address': self.address,
+            'phone': self.phone,
+            'contact_person': self.contact_person
+        }, ensure_ascii=False)
+
+    def __str__(self):
+        return f"Customer[ID={self.customer_id}, Name={self.name}, Contact={self.contact_person}]"
+
+
+# ЛР2.1 (Репозиторий)
+
+class Customer_rep_json:
+    def __init__(self, file_path):
+        self.__file_path = file_path
+        self.__data_list = []
+        self.read_from_file()
+
+    # a. Чтение всех значений из файла
+    def read_from_file(self):
+        if os.path.exists(self.__file_path):
+            try:
+                with open(self.__file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if not content:
+                        self.__data_list = []
+                        return
+                    items = json.loads(content)
+                    self.__data_list = [Customer(json_data=item) for item in items]
+            except (json.JSONDecodeError, ValueError):
+                self.__data_list = []
+        else:
+            # Создаем пустой файл, если его нет
+            self.write_to_file()
+
+    # b. Запись всех значений в файл
+    def write_to_file(self):
+        with open(self.__file_path, 'w', encoding='utf-8') as f:
+            json_data = [json.loads(c.to_json()) for c in self.__data_list]
+            json.dump(json_data, f, ensure_ascii=False, indent=4)
+
+    # c. Получить объект по ID
+    def get_by_id(self, customer_id):
+        return next((c for c in self.__data_list if c.customer_id == customer_id), None)
+
+    # d. get_k_n_short_list (Пагинация)
+    def get_k_n_short_list(self, k, n):
+        # k - номер страницы, n - количество элементов
+        start = (k - 1) * n
+        end = start + n
+        return [c.to_short_string() for c in self.__data_list[start:end]]
+
+    # e. Сортировать элементы по выбранному полю (по Name)
+    def sort_by_name(self):
+        self.__data_list.sort(key=lambda x: x.name.lower())
+
+    # f. Добавить объект в список (формирование нового ID)
+    def add(self, new_customer):
+        max_id = max([c.customer_id for c in self.__data_list], default=0)
+        new_customer.customer_id = max_id + 1
+        self.__data_list.append(new_customer)
+
+    # g. Заменить элемент списка по ID
+    def replace_by_id(self, customer_id, new_customer):
+        for i, c in enumerate(self.__data_list):
+            if c.customer_id == customer_id:
+                new_customer.customer_id = customer_id
+                self.__data_list[i] = new_customer
+                return True
+        return False
+
+    # h. Удалить элемент списка по ID
+    def delete_by_id(self, customer_id):
+        self.__data_list = [c for c in self.__data_list if c.customer_id != customer_id]
+
+    # i. get_count Получить количество элементов
+    def get_count(self):
+        return len(self.__data_list)
+
+
+# ДЕМОНСТРАЦИЯ (Выполнение ЛР2)
+if __name__ == "__main__":
+    # Инициализация (Файл создастся автоматически)
+    db_file = "customers_db.json"
+    repo = Customer_rep_json(db_file)
+
+    print(f"--- Шаг 1: Текущее количество записей: {repo.get_count()} ---")
+
+    # f. Добавление объекта (передаем временный ID=1, метод add его заменит)
+    print("\n--- Шаг 2: Добавление новых записей ---")
+    repo.add(Customer(1, "Альфа Групп", "Москва", "+79001112233", "Иван Иванов"))
+    repo.add(Customer(1, "Зенит", "Санкт-Петербург", "+79004445566", "Петр Петров"))
+    repo.add(Customer(1, "Бета Технолоджи", "Казань", "+79007778899", "Анна Сидорова"))
+
+    # e. Сортировка по имени
+    print("\n--- Шаг 3: Сортировка по имени ---")
+    repo.sort_by_name()
+
+    # b. Запись в файл
+    repo.write_to_file()
+    print("Данные сохранены в файл customers_db.json")
+
+    # d. Получение списка (Пагинация: 1 страница, по 2 элемента)
+    print("\n--- Шаг 4: Пагинация (Страница 1, размер 2) ---")
+    short_list = repo.get_k_n_short_list(1, 2)
+    for item in short_list:
+        print(item)
+
+    # c. Получение по ID
+    print("\n--- Шаг 5: Поиск объекта по ID 2 ---")
+    found = repo.get_by_id(2)
+    print(f"Найден: {found}")
+
+    # i. Количество
+    print(f"\n--- Шаг 6: Всего элементов в списке: {repo.get_count()} ---")
+
+    # g. Замена по ID
+    print("\n--- Шаг 7: Замена объекта с ID 2 ---")
+    updated_customer = Customer(1, "Обновленная Компания", "Новосибирск", "+70000000000", "Дмитрий")
+    repo.replace_by_id(2, updated_customer)
+    print(f"Новый объект с ID 2: {repo.get_by_id(2)}")
+
+    # h. Удаление по ID
+    # repo.delete_by_id(1) # Раскомментируйте, чтобы проверить удаление
