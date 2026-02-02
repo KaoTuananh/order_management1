@@ -24,5 +24,6 @@ class Application:
         # Маршрутизация
         if path == '/' or path == '/index':
             response = self.main_controller.handle_request(environ)
-        elif path == '/filter':  # РОУТ ДЛЯ ФИЛЬТРАЦИИ
+        elif path == '/sort':  # РОУТ ДЛЯ СОРТИРОВКИ
             response = self.main_controller.handle_request(environ)
+        # ... другие маршруты
