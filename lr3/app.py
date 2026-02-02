@@ -11,7 +11,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from controllers.main_controller import MainController
-from controllers.customer_form_controller import CustomerFormController  # ИМПОРТ ДОБАВЛЕН
+from controllers.customer_form_controller import CustomerFormController
+from controllers.customer_details_controller import CustomerDetailsController  # ИМПОРТ ДОБАВЛЕН
 
 
 class Application:
@@ -33,9 +34,17 @@ class Application:
             response = self.main_controller.handle_request(environ)
         elif path == '/get_customer_details':
             response = self.main_controller.handle_request(environ)
-        elif path == '/add':  # НОВЫЙ МАРШРУТ ДОБАВЛЕН
+        elif path == '/add':
             # Контроллер для добавления
             controller = CustomerFormController(self.main_controller.repository, 'add')
+            response = controller.handle_request(environ)
+        elif path == '/edit':  # НОВЫЙ МАРШРУТ ДОБАВЛЕН
+            # Контроллер для редактирования
+            controller = CustomerFormController(self.main_controller.repository, 'edit')
+            response = controller.handle_request(environ)
+        elif path == '/customer':  # НОВЫЙ МАРШРУТ ДОБАВЛЕН
+            # Контроллер для просмотра деталей клиента
+            controller = CustomerDetailsController(self.main_controller.repository)
             response = controller.handle_request(environ)
         elif path == '/get_update_count':
             response = self.main_controller.handle_request(environ)
@@ -120,17 +129,19 @@ def run_server(host='localhost', port=8000):
     print("\nАрхитектура MVC с паттерном Наблюдатель:")
     print("- Модели: customer.py, customer_repository.py")
     print("- Представления: main_view.py, customer_details_view.py, customer_form_view.py")
-    print("- Контроллеры: main_controller.py, customer_form_controller.py")
+    print("- Контроллеры: main_controller.py, customer_form_controller.py, customer_details_controller.py")
     print("\nДоступные маршруты:")
     print("  GET  /                    - Главная страница с таблицей клиентов")
-    print("  GET  /get_customer_details?id=<id> - Детальная информация о клиенте (отдельная вкладка)")
+    print("  GET  /customer?id=<id>    - Детальная информация о клиенте (отдельная вкладка)")
     print("  GET  /add                 - Добавление клиента")
     print("  POST /add                 - Отправка формы добавления")
+    print("  GET  /edit?id=<id>        - Редактирование клиента")
+    print("  POST /edit                - Отправка формы редактирования")
     print("\nОсобенности реализации:")
     print("  ✓ Паттерн Наблюдатель (Observer/Observable)")
     print("  ✓ Валидация данных согласно ЛР1 (телефон 5-20 цифр)")
     print("  ✓ Просмотр деталей в отдельной вкладке")
-    print("  ✓ Добавление клиентов через отдельную форму")
+    print("  ✓ Добавление и редактирование клиентов")
     print("=" * 60)
     print("Нажмите Ctrl+C для остановки сервера")
 

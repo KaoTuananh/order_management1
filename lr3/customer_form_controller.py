@@ -3,11 +3,11 @@ from models.customer import Customer, ValidationError
 
 
 class CustomerFormController:
-    """Контроллер формы добавления клиента."""
+    """Контроллер формы клиента (добавление и редактирование)."""
 
     def __init__(self, repository, mode='add'):
         self.repository = repository
-        self.mode = mode
+        self.mode = mode  # 'add' или 'edit'
 
     def handle_request(self, environ):
         """Обработка HTTP запросов."""
@@ -19,19 +19,33 @@ class CustomerFormController:
             return self.handle_post(environ)
         else:
             from views.customer_form_view import CustomerFormView
-            view = CustomerFormView(self)
+            view = CustomerFormView(self, self.mode)
             return view.render_error("Неверный метод запроса")
 
     def handle_get(self, environ):
-        """Обработка GET запроса - показать форму."""
+        """Обработка GET запроса."""
         from views.customer_form_view import CustomerFormView
-        view = CustomerFormView(self)
-        return view.render_form()
+        view = CustomerFormView(self, self.mode)
+
+        if self.mode == 'edit':
+            # Получаем ID клиента для редактирования
+            query_string = environ.get('QUERY_STRING', '')
+            params = urllib.parse.parse_qs(query_string)
+            customer_id = int(params.get('id', [0])[0])
+            customer = self.repository.get_by_id(customer_id)
+
+            if customer:
+                return view.render_form(customer)
+            else:
+                return view.render_error("Клиент не найден")
+        else:
+            # Для добавления показываем пустую форму
+            return view.render_form()
 
     def handle_post(self, environ):
-        """Обработка POST запроса - добавить клиента."""
+        """Обработка POST запроса."""
         from views.customer_form_view import CustomerFormView
-        view = CustomerFormView(self)
+        view = CustomerFormView(self, self.mode)
 
         try:
             # Читаем тело запроса
@@ -57,24 +71,48 @@ class CustomerFormController:
                 'contact_person': contact_person
             }
 
-            try:
-                # Создаем временный клиент для проверки валидации
-                temp_customer = Customer(
-                    customer_id=0,  # Временный ID
-                    name=name,
-                    address=address,
-                    phone=phone,
-                    contact_person=contact_person
-                )
+            if self.mode == 'edit':
+                # Для редактирования нужен ID
+                customer_id = int(post_data.get('customer_id', [0])[0])
 
-                # Добавляем клиента
-                if self.repository.add(customer_data):
-                    return view.render_success("Клиент успешно добавлен")
-                else:
-                    return view.render_error("Не удалось добавить клиента")
+                # Создаем объект для валидации
+                try:
+                    temp_customer = Customer(
+                        customer_id=customer_id,
+                        name=name,
+                        address=address,
+                        phone=phone,
+                        contact_person=contact_person
+                    )
 
-            except ValidationError as e:
-                return view.render_error(f"Ошибка валидации: {str(e)}")
+                    # Обновляем клиента
+                    if self.repository.update(customer_id, customer_data):
+                        return view.render_success("Клиент успешно обновлен")
+                    else:
+                        return view.render_error("Не удалось обновить клиента")
+
+                except ValidationError as e:
+                    return view.render_error(f"Ошибка валидации: {str(e)}")
+            else:
+                # Для добавления
+                try:
+                    # Создаем временный клиент для проверки валидации
+                    temp_customer = Customer(
+                        customer_id=0,  # Временный ID
+                        name=name,
+                        address=address,
+                        phone=phone,
+                        contact_person=contact_person
+                    )
+
+                    # Добавляем клиента
+                    if self.repository.add(customer_data):
+                        return view.render_success("Клиент успешно добавлен")
+                    else:
+                        return view.render_error("Не удалось добавить клиента")
+
+                except ValidationError as e:
+                    return view.render_error(f"Ошибка валидации: {str(e)}")
 
         except ValidationError as e:
             return view.render_error(f"Ошибка валидации: {str(e)}")

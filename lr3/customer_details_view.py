@@ -75,6 +75,16 @@ class CustomerDetailsView:
                     </div>
                 </div>
 
+                <div class="action-buttons">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <a href="/edit?id={customer.customer_id}" class="btn btn-warning w-100">
+                                Редактировать клиента
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-4">
                     <a href="/" class="btn btn-secondary">
                         Вернуться к списку

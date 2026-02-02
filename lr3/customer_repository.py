@@ -64,6 +64,63 @@ class CustomerRepository(Observable):
                 return customer
         return None
 
+    def add(self, customer_data: dict) -> bool:
+        """Добавить клиента."""
+        try:
+            customer_id = self._next_id
+            self._next_id += 1
+
+            customer = Customer(
+                customer_id=customer_id,
+                name=customer_data.get('name', ''),
+                address=customer_data.get('address', ''),
+                phone=customer_data.get('phone', ''),
+                contact_person=customer_data.get('contact_person', '')
+            )
+
+            self._customers.append(customer)
+            self._save_data()
+            self.notify_observers({
+                "action": "add",
+                "customer": customer,
+                "customer_id": customer_id
+            })
+            return True
+        except ValidationError as e:
+            print(f"Ошибка валидации при добавлении: {e}")
+            return False
+        except Exception as e:
+            print(f"Error adding customer: {e}")
+            return False
+
+    def update(self, customer_id: int, customer_data: dict) -> bool:  # НОВЫЙ МЕТОД
+        """Обновить клиента."""
+        for i, customer in enumerate(self._customers):
+            if customer.customer_id == customer_id:
+                try:
+                    updated_customer = Customer(
+                        customer_id=customer_id,
+                        name=customer_data.get('name', customer.name),
+                        address=customer_data.get('address', customer.address),
+                        phone=customer_data.get('phone', customer.phone),
+                        contact_person=customer_data.get('contact_person', customer.contact_person)
+                    )
+                    self._customers[i] = updated_customer
+                    self._save_data()
+                    self.notify_observers({
+                        "action": "update",
+                        "customer": updated_customer,
+                        "customer_id": customer_id
+                    })
+                    return True
+                except ValidationError as e:
+                    print(f"Ошибка валидации при обновлении: {e}")
+                    return False
+                except Exception as e:
+                    print(f"Error updating customer: {e}")
+                    return False
+        return False
+
     def get_k_n_short_list(self, k: int, n: int,
                            filter_func: Optional[Callable[[Customer], bool]] = None) -> List[ShortCustomer]:
         """Получить список с пагинацией."""

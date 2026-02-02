@@ -31,7 +31,8 @@ class MainView(Observer):
                 <td>{customer.phone}</td>
                 <td>{customer.contact_person}</td>
                 <td>
-                    <a href="/get_customer_details?id={customer.customer_id}" class="btn btn-info btn-sm" target="_blank">Просмотр</a>
+                    <a href="/customer?id={customer.customer_id}" class="btn btn-info btn-sm" target="_blank">Просмотр</a>
+                    <a href="/edit?id={customer.customer_id}" class="btn btn-warning btn-sm">Редактировать</a>  <!-- КНОПКА РЕДАКТИРОВАНИЯ ДОБАВЛЕНА -->
                 </td>
             </tr>
             """
@@ -73,7 +74,7 @@ class MainView(Observer):
                 <h1 class="mb-4">Управление клиентами</h1>
 
                 <div class="mb-4">
-                    <a href="/add" class="btn btn-success">Добавить клиента</a>  <!-- КНОПКА ДОБАВЛЕНА -->
+                    <a href="/add" class="btn btn-success">Добавить клиента</a>
                     <button class="btn btn-secondary" onclick="location.reload()">Обновить</button>
                     <span class="badge bg-info ms-2">Обновлений: <span id="updateCounter">0</span></span>
                 </div>
