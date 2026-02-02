@@ -12,21 +12,42 @@ class MainController:
         # Регистрируем представление как наблюдателя
         self.repository.add_observer(self.view)
 
-    def handle_request(self, environ):
-        """Обработка HTTP запросов."""
-        method = environ.get('REQUEST_METHOD', 'GET')
-        path = environ.get('PATH_INFO', '/')
+    def filter_customers(self, environ):
+        """Фильтрация клиентов."""
+        query_string = environ.get('QUERY_STRING', '')
+        params = urllib.parse.parse_qs(query_string)
 
-        if path == '/' or path == '/index':
-            return self.show_index(environ)
-        elif path == '/get_customer_details':
-            return self.get_customer_details(environ)
-        elif path == '/delete':  # НОВЫЙ МАРШРУТ
-            return self.delete_customer(environ)
-        elif path == '/get_update_count':
-            return self.get_update_count()
-        else:
-            return self.view.render_not_found()
+        filter_type = params.get('filter_type', ['name'])[0]
+        filter_value = params.get(filter_type, [''])[0]
+
+        # Сохраняем текущие параметры
+        current_params = {}
+        sort_by = params.get('sort', ['customer_id'])[0]
+        reverse = params.get('reverse', ['false'])[0].lower()
+        page = params.get('page', [1])[0]
+
+        current_params['sort'] = sort_by
+        current_params['reverse'] = reverse
+        current_params['page'] = page
+        current_params['filter_type'] = filter_type
+
+        if filter_value:
+            if filter_type == 'name':
+                current_params['filter_name'] = filter_value
+            elif filter_type == 'phone':
+                current_params['filter_phone'] = filter_value
+            elif filter_type == 'address':
+                current_params['filter_address'] = filter_value
+
+        # Собираем строку запроса
+        query_parts = []
+        for key, value in current_params.items():
+            query_parts.append(f"{key}={urllib.parse.quote(str(value))}")
+
+        query_string = '&'.join(query_parts)
+        url = f'/?{query_string}' if query_string else '/'
+
+        return self.view.render_redirect(url)
 
     def show_index(self, environ):
         """Показать главную страницу."""
@@ -34,80 +55,63 @@ class MainController:
         params = urllib.parse.parse_qs(query_string)
 
         page = int(params.get('page', [1])[0])
+        sort_by = params.get('sort', ['customer_id'])[0]
+        reverse = params.get('reverse', ['false'])[0].lower() == 'true'
+
+        # Параметры фильтрации
+        filter_name = params.get('filter_name', [None])[0]
+        filter_phone = params.get('filter_phone', [None])[0]
+        filter_address = params.get('filter_address', [None])[0]
+        filter_type = params.get('filter_type', ['name'])[0]
+
         customers_per_page = 10
 
-        # Получаем список клиентов
-        short_list = self.repository.get_k_n_short_list(page, customers_per_page)
+        # Создаем фильтрующую функцию - ИСПОЛЬЗОВАНИЕ ИЗ ПРЕДЫДУЩЕЙ ЛР
+        filter_func = None
+        if filter_type == 'name' and filter_name:
+            filter_func = lambda c: filter_name.lower() in c.name.lower()
+        elif filter_type == 'phone' and filter_phone:
+            filter_func = lambda c: filter_phone.lower() in c.phone.lower()
+        elif filter_type == 'address' and filter_address:
+            filter_func = lambda c: filter_address.lower() in c.address.lower()
 
-        total_count = self.repository.get_count()
+        # Получаем отсортированный список с фильтрацией
+        short_list = self.repository.get_k_n_short_list(
+            page, customers_per_page, filter_func, sort_by, reverse
+        )
+
+        total_count = self.repository.get_count(filter_func)
         total_pages = max(1, (total_count + customers_per_page - 1) // customers_per_page)
 
-        return self.view.render_index(short_list, page, total_pages)
+        # Генерируем ссылки для сортировки
+        sort_links = {}
+        for field in ['customer_id', 'name', 'phone', 'address', 'contact_person']:
+            if field == sort_by:
+                sort_links[field] = f'/?sort={field}&reverse={str(not reverse).lower()}'
+            else:
+                sort_links[field] = f'/?sort={field}&reverse=false'
 
-    def get_customer_details(self, environ):
-        """Получить детали клиента."""
-        query_string = environ.get('QUERY_STRING', '')
-        params = urllib.parse.parse_qs(query_string)
+            # Добавляем параметры фильтрации
+            sort_links[field] += f'&filter_type={filter_type}'
+            if filter_type == 'name' and filter_name:
+                sort_links[field] += f'&filter_name={urllib.parse.quote(filter_name)}'
+            elif filter_type == 'phone' and filter_phone:
+                sort_links[field] += f'&filter_phone={urllib.parse.quote(filter_phone)}'
+            elif filter_type == 'address' and filter_address:
+                sort_links[field] += f'&filter_address={urllib.parse.quote(filter_address)}'
 
-        customer_id = int(params.get('id', [0])[0])
-        customer = self.repository.get_by_id(customer_id)
+            if page > 1:
+                sort_links[field] += f'&page={page}'
 
-        from views.customer_details_view import CustomerDetailsView
-        view = CustomerDetailsView(self)
-
-        if customer:
-            return view.render_details(customer)
-        else:
-            return view.render_error("Клиент не найден")
-
-    def delete_customer(self, environ):  # НОВЫЙ МЕТОД
-        """Удалить клиента."""
-        if environ.get('REQUEST_METHOD') == 'POST':
-            try:
-                # Читаем тело запроса
-                try:
-                    request_body_size = int(environ.get('CONTENT_LENGTH', 0))
-                except ValueError:
-                    request_body_size = 0
-
-                if request_body_size > 0:
-                    request_body = environ['wsgi.input'].read(request_body_size)
-                    post_data = urllib.parse.parse_qs(request_body.decode('utf-8'))
-                else:
-                    post_data = {}
-
-                customer_id = int(post_data.get('id', [0])[0])
-
-                if self.repository.delete(customer_id):
-                    return self.view.render_json({
-                        'success': True,
-                        'message': 'Клиент успешно удален',
-                        'customer_id': customer_id
-                    })
-                else:
-                    return self.view.render_json({
-                        'success': False,
-                        'error': 'Клиент не найден'
-                    })
-            except Exception as e:
-                return self.view.render_json({
-                    'success': False,
-                    'error': str(e)
-                })
-        return self.view.render_json({
-            'success': False,
-            'error': 'Неверный метод запроса'
-        })
-
-    def get_update_count(self):
-        """Получить счетчик обновлений Observer."""
-        import json
-        data = json.dumps({
-            'update_count': self.view._update_counter
-        }).encode('utf-8')
-        return [
-            '200 OK',
-            [('Content-Type', 'application/json; charset=utf-8'),
-             ('Content-Length', str(len(data)))],
-            [data]
-        ]
+        return self.view.render_index(
+            short_list,
+            page,
+            total_pages,
+            sort_by,
+            reverse,
+            filter_type,
+            filter_name,
+            filter_phone,
+            filter_address,
+            sort_links
+        )

@@ -5,226 +5,66 @@ import urllib.parse
 class MainView(Observer):
     """Главное представление с поддержкой Observer."""
 
-    def __init__(self, controller):
-        self.controller = controller
-        self._update_counter = 0
+    def render_index(self, customers, page, total_pages, sort_by=None, reverse=False,
+                     filter_type='name', filter_name=None, filter_phone=None,
+                     filter_address=None, sort_links=None):
+        """Рендер главной страницы с фильтрацией."""
 
-    def update(self, subject, data=None):
-        """
-        Обновление представления через паттерн Наблюдатель.
-        Вызывается при изменении данных в репозитории.
-        """
-        self._update_counter += 1
-        print(f"[Observer] Получено обновление #{self._update_counter} от {subject.__class__.__name__}")
+        # Устанавливаем значения для полей фильтрации
+        name_value = filter_name if filter_type == 'name' and filter_name else ""
+        phone_value = filter_phone if filter_type == 'phone' and filter_phone else ""
+        address_value = filter_address if filter_type == 'address' and filter_address else ""
 
-        if data:
-            print(f"[Observer] Данные обновления: {data}")
+        # Определяем активный тип фильтра
+        name_active = "active" if filter_type == 'name' else ""
+        phone_active = "active" if filter_type == 'phone' else ""
+        address_active = "active" if filter_type == 'address' else ""
 
-    def render_index(self, customers, page, total_pages):
-        """Рендер главной страницы."""
-        customers_html = ""
-        for customer in customers:
-            customers_html += f"""
-            <tr>
-                <td>{customer.customer_id}</td>
-                <td>{customer.name}</td>
-                <td>{customer.phone}</td>
-                <td>{customer.contact_person}</td>
-                <td>
-                    <a href="/customer?id={customer.customer_id}" class="btn btn-info btn-sm" target="_blank">Просмотр</a>
-                    <a href="/edit?id={customer.customer_id}" class="btn btn-warning btn-sm">Редактировать</a>
-                    <button onclick="deleteCustomer({customer.customer_id})" class="btn btn-danger btn-sm">Удалить</button>  <!-- КНОПКА УДАЛЕНИЯ ДОБАВЛЕНА -->
-                </td>
-            </tr>
-            """
-
-        pagination_html = ""
-        if total_pages > 1:
-            pagination_html = '<nav><ul class="pagination justify-content-center">'
-
-            # Кнопка "Назад"
-            if page > 1:
-                pagination_html += f'<li class="page-item"><a class="page-link" href="/?page={page - 1}">← Назад</a></li>'
-
-            # Номера страниц
-            for p in range(1, total_pages + 1):
-                active = "active" if p == page else ""
-                if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2):
-                    pagination_html += f'<li class="page-item {active}"><a class="page-link" href="/?page={p}">{p}</a></li>'
-                elif p == page - 3 or p == page + 3:
-                    pagination_html += '<li class="page-item disabled"><span class="page-link">...</span></li>'
-
-            # Кнопка "Вперед"
-            if page < total_pages:
-                pagination_html += f'<li class="page-item"><a class="page-link" href="/?page={page + 1}">Вперед →</a></li>'
-
-            pagination_html += '</ul></nav>'
+        # Информация о фильтрации
+        filter_info = ""
+        if filter_type == 'name' and filter_name:
+            filter_info = f'<div class="alert alert-info mb-3">Фильтр: <strong>по имени</strong> - "{filter_name}"</div>'
+        elif filter_type == 'phone' and filter_phone:
+            filter_info = f'<div class="alert alert-info mb-3">Фильтр: <strong>по телефону</strong> - "{filter_phone}"</div>'
+        elif filter_type == 'address' and filter_address:
+            filter_info = f'<div class="alert alert-info mb-3">Фильтр: <strong>по адресу</strong> - "{filter_address}"</div>'
 
         html = f"""
-        <!DOCTYPE html>
-        <html lang="ru">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Управление клиентами</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link rel="stylesheet" href="/static/css/style.css">
-        </head>
-        <body>
-            <div class="container mt-4">
-                <h1 class="mb-4">Управление клиентами</h1>
+        <!-- HTML код с формой фильтрации -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Фильтрация и сортировка</h5>
+            </div>
+            <div class="card-body">
+                <form action="/filter" method="GET" class="row g-3">
+                    <input type="hidden" name="filter_type" id="filterType" value="{filter_type}">
 
-                <div class="mb-4">
-                    <a href="/add" class="btn btn-success">Добавить клиента</a>
-                    <button class="btn btn-secondary" onclick="location.reload()">Обновить</button>
-                    <span class="badge bg-info ms-2">Обновлений: <span id="updateCounter">0</span></span>
-                </div>
-
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Список клиентов</h5>
-                        <span class="badge bg-primary">Всего: {len(customers)} из {self.controller.repository.get_count()}</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Имя</th>
-                                        <th>Телефон</th>
-                                        <th>Контактное лицо</th>
-                                        <th>Действия</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {customers_html if customers_html else '<tr><td colspan="5" class="text-center">Клиенты не найдены</td></tr>'}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div class="text-muted">
-                                Страница {page} из {total_pages}
-                            </div>
-                            {pagination_html}
+                    <div class="col-md-3">
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn {name_active}" onclick="setFilterType('name')">По имени</button>
+                            <button type="button" class="btn {phone_active}" onclick="setFilterType('phone')">По телефону</button>
+                            <button type="button" class="btn {address_active}" onclick="setFilterType('address')">По адресу</button>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <script>
-            // Инициализируем счетчик обновлений
-            document.addEventListener('DOMContentLoaded', function() {{
-                const counterElement = document.getElementById('updateCounter');
-                if (counterElement) {{
-                    setInterval(() => {{
-                        fetch('/get_update_count')
-                            .then(response => response.json())
-                            .then(data => {{
-                                if (data.update_count) {{
-                                    counterElement.textContent = data.update_count;
-                                }}
-                            }});
-                    }}, 5000);
-                }}
-            }});
+                    <div class="col-md-6">
+                        <div id="nameFilter" class="filter-field" style="display: {'block' if filter_type == 'name' else 'none'};">
+                            <input type="text" class="form-control" name="name" placeholder="Введите имя для фильтрации" value="{name_value}">
+                        </div>
+                        <div id="phoneFilter" class="filter-field" style="display: {'block' if filter_type == 'phone' else 'none'};">
+                            <input type="text" class="form-control" name="phone" placeholder="Введите телефон для фильтрации" value="{phone_value}">
+                        </div>
+                        <div id="addressFilter" class="filter-field" style="display: {'block' if filter_type == 'address' else 'none'};">
+                            <input type="text" class="form-control" name="address" placeholder="Введите адрес для фильтрации" value="{address_value}">
+                        </div>
+                    </div>
 
-            // Обработка сообщений от дочерних окон (паттерн Observer)
-            window.addEventListener('message', function(event) {{
-                if (event.data && event.data.action === 'customer_details_opened') {{
-                    console.log(`Детали клиента #${{event.data.customer_id}} открыты в отдельной вкладке`);
-                }}
-            }});
-            </script>
-
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-            <script src="/static/js/main.js"></script>
-        </body>
-        </html>
-        """
-
-        return self._wrap_response(html)
-
-    def render_customer_details(self, customer):
-        """Рендер деталей клиента для модального окна."""
-        html = f"""
-        <div>
-            <div class="mb-3">
-                <label class="form-label"><strong>ID:</strong></label>
-                <div class="form-control-plaintext">{customer.customer_id}</div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label"><strong>Наименование:</strong></label>
-                <div class="form-control-plaintext">{customer.name}</div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label"><strong>Адрес:</strong></label>
-                <div class="form-control-plaintext">{customer.address}</div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label"><strong>Телефон:</strong></label>
-                <div class="form-control-plaintext">{customer.phone}</div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label"><strong>Контактное лицо:</strong></label>
-                <div class="form-control-plaintext">{customer.contact_person}</div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">Применить фильтр</button>
+                        <a href="/" class="btn btn-secondary w-100 mt-2">Сбросить фильтр</a>
+                    </div>
+                </form>
             </div>
         </div>
         """
-        return self._wrap_response(html, content_type='text/html; charset=utf-8')
-
-    def render_json(self, data):
-        """Рендер JSON ответа."""
-        import json
-        response_body = json.dumps(data, ensure_ascii=False).encode('utf-8')
-        return [
-            '200 OK',
-            [('Content-Type', 'application/json; charset=utf-8'),
-             ('Content-Length', str(len(response_body)))],
-            [response_body]
-        ]
-
-    def render_redirect(self, url):
-        """Рендер редиректа."""
-        return [
-            '302 Found',
-            [('Location', url),
-             ('Content-Type', 'text/plain; charset=utf-8'),
-             ('Content-Length', '0')],
-            []
-        ]
-
-    def render_not_found(self):
-        """Рендер страницы 404."""
-        html = """
-        <!DOCTYPE html>
-        <html lang="ru">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>404 Not Found</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head>
-        <body>
-            <div class="container mt-4">
-                <div class="alert alert-danger">
-                    <h1>404 - Страница не найдена</h1>
-                    <p>Запрошенная страница не существует.</p>
-                    <a href="/" class="btn btn-primary">Вернуться на главную</a>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return self._wrap_response(html, status='404 Not Found')
-
-    def _wrap_response(self, html, status='200 OK', content_type='text/html; charset=utf-8'):
-        """Обертка для HTTP ответа."""
-        response_body = html.encode('utf-8')
-        return [
-            status,
-            [('Content-Type', content_type),
-             ('Content-Length', str(len(response_body)))],
-            [response_body]
-        ]
+        return self._wrap_response(html)
