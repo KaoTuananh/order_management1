@@ -46,6 +46,13 @@ body {
     border-radius: 4px;
 }
 
+.alert {
+    margin-top: 1rem;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 .pagination {
     margin-top: 1rem;
     justify-content: center;
@@ -104,6 +111,16 @@ h1 {
     background-color: rgba(13, 110, 253, 0.1) !important;
 }
 
+/* Уведомления */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    min-width: 300px;
+}
+
+/* Анимации */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }

@@ -20,10 +20,6 @@ class MainView(Observer):
         if data:
             print(f"[Observer] Данные обновления: {data}")
 
-        # В реальном приложении здесь можно было бы
-        # отправлять WebSocket сообщения или SSE для обновления UI
-        # В текущей реализации обновление происходит через redirect
-
     def render_index(self, customers, page, total_pages):
         """Рендер главной страницы."""
         customers_html = ""
@@ -71,45 +67,13 @@ class MainView(Observer):
             <title>Управление клиентами</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="/static/css/style.css">
-            <script>
-            // Инициализация счетчика обновлений Observer
-            let updateCounter = 0;
-
-            function handleObserverUpdate(data) {{
-                updateCounter++;
-                console.log(`Обновление #${{updateCounter}}:`, data);
-
-                // Можно добавить визуальное уведомление
-                if (data && data.action) {{
-                    showNotification(`${{data.action}} выполнено`);
-                }}
-            }}
-
-            function showNotification(message) {{
-                // Создаем уведомление
-                const notification = document.createElement('div');
-                notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
-                notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
-                notification.innerHTML = `
-                    <strong>Обновление:</strong> ${{message}}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.body.appendChild(notification);
-
-                // Автоматическое скрытие через 3 секунды
-                setTimeout(() => {{
-                    if (notification.parentNode) {{
-                        notification.remove();
-                    }}
-                }}, 3000);
-            }}
-            </script>
         </head>
         <body>
             <div class="container mt-4">
                 <h1 class="mb-4">Управление клиентами</h1>
 
                 <div class="mb-4">
+                    <a href="/add" class="btn btn-success">Добавить клиента</a>  <!-- КНОПКА ДОБАВЛЕНА -->
                     <button class="btn btn-secondary" onclick="location.reload()">Обновить</button>
                     <span class="badge bg-info ms-2">Обновлений: <span id="updateCounter">0</span></span>
                 </div>
@@ -153,8 +117,6 @@ class MainView(Observer):
                 const counterElement = document.getElementById('updateCounter');
                 if (counterElement) {{
                     setInterval(() => {{
-                        // В реальном приложении здесь бы был WebSocket или SSE
-                        // Для демонстрации просто обновляем счетчик
                         fetch('/get_update_count')
                             .then(response => response.json())
                             .then(data => {{
@@ -170,7 +132,6 @@ class MainView(Observer):
             window.addEventListener('message', function(event) {{
                 if (event.data && event.data.action === 'customer_details_opened') {{
                     console.log(`Детали клиента #${{event.data.customer_id}} открыты в отдельной вкладке`);
-                    showNotification(`Детали клиента #${{event.data.customer_id}} открыты`);
                 }}
             }});
             </script>

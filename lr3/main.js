@@ -35,6 +35,14 @@ window.addEventListener('message', function(event) {
     if (event.data && event.data.action === 'customer_details_opened') {
         console.log(`Получено сообщение об открытии деталей клиента #${event.data.customer_id}`);
         showNotification(`Детали клиента #${event.data.customer_id} открыты в отдельной вкладке`);
+    } else if (event.data && event.data.action === 'customer_updated') {  // ДОБАВЛЕНО
+        console.log('Получено сообщение об обновлении клиента');
+        showNotification('Данные клиента обновлены через паттерн Наблюдатель');
+
+        // Обновляем страницу через 1 секунду
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
     }
 });
 

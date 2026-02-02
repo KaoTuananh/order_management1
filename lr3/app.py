@@ -1,4 +1,8 @@
-
+#!/usr/bin/env python3
+"""
+Лабораторная работа 3: Веб-сервер для управления клиентами
+Архитектура MVC без фреймворков с паттерном Наблюдатель
+"""
 
 import os
 import sys
@@ -7,6 +11,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from controllers.main_controller import MainController
+from controllers.customer_form_controller import CustomerFormController  # ИМПОРТ ДОБАВЛЕН
 
 
 class Application:
@@ -27,6 +32,12 @@ class Application:
         if path == '/' or path == '/index':
             response = self.main_controller.handle_request(environ)
         elif path == '/get_customer_details':
+            response = self.main_controller.handle_request(environ)
+        elif path == '/add':  # НОВЫЙ МАРШРУТ ДОБАВЛЕН
+            # Контроллер для добавления
+            controller = CustomerFormController(self.main_controller.repository, 'add')
+            response = controller.handle_request(environ)
+        elif path == '/get_update_count':
             response = self.main_controller.handle_request(environ)
         else:
             # Проверяем, не запрашивают ли статический файл без префикса
@@ -108,14 +119,18 @@ def run_server(host='localhost', port=8000):
     print(f"Сервер запущен на http://{host}:{port}")
     print("\nАрхитектура MVC с паттерном Наблюдатель:")
     print("- Модели: customer.py, customer_repository.py")
-    print("- Представления: main_view.py, customer_details_view.py")
-    print("- Контроллеры: main_controller.py")
+    print("- Представления: main_view.py, customer_details_view.py, customer_form_view.py")
+    print("- Контроллеры: main_controller.py, customer_form_controller.py")
     print("\nДоступные маршруты:")
     print("  GET  /                    - Главная страница с таблицей клиентов")
     print("  GET  /get_customer_details?id=<id> - Детальная информация о клиенте (отдельная вкладка)")
+    print("  GET  /add                 - Добавление клиента")
+    print("  POST /add                 - Отправка формы добавления")
     print("\nОсобенности реализации:")
     print("  ✓ Паттерн Наблюдатель (Observer/Observable)")
+    print("  ✓ Валидация данных согласно ЛР1 (телефон 5-20 цифр)")
     print("  ✓ Просмотр деталей в отдельной вкладке")
+    print("  ✓ Добавление клиентов через отдельную форму")
     print("=" * 60)
     print("Нажмите Ctrl+C для остановки сервера")
 
