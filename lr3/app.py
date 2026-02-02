@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from controllers.main_controller import MainController
 from controllers.customer_form_controller import CustomerFormController
-from controllers.customer_details_controller import CustomerDetailsController  # ИМПОРТ ДОБАВЛЕН
+from controllers.customer_details_controller import CustomerDetailsController
 
 
 class Application:
@@ -35,14 +35,14 @@ class Application:
         elif path == '/get_customer_details':
             response = self.main_controller.handle_request(environ)
         elif path == '/add':
-            # Контроллер для добавления
+            # Контроллер для добавления - использует один контроллер с mode='add'
             controller = CustomerFormController(self.main_controller.repository, 'add')
             response = controller.handle_request(environ)
-        elif path == '/edit':  # НОВЫЙ МАРШРУТ ДОБАВЛЕН
-            # Контроллер для редактирования
+        elif path == '/edit':
+            # Контроллер для редактирования - использует один контроллер с mode='edit'
             controller = CustomerFormController(self.main_controller.repository, 'edit')
             response = controller.handle_request(environ)
-        elif path == '/customer':  # НОВЫЙ МАРШРУТ ДОБАВЛЕН
+        elif path == '/customer':
             # Контроллер для просмотра деталей клиента
             controller = CustomerDetailsController(self.main_controller.repository)
             response = controller.handle_request(environ)
@@ -140,8 +140,9 @@ def run_server(host='localhost', port=8000):
     print("\nОсобенности реализации:")
     print("  ✓ Паттерн Наблюдатель (Observer/Observable)")
     print("  ✓ Валидация данных согласно ЛР1 (телефон 5-20 цифр)")
-    print("  ✓ Просмотр деталей в отдельной вкладке")
-    print("  ✓ Добавление и редактирование клиентов")
+    print("  ✓ Рефакторинг: одна форма для добавления и редактирования")
+    print("  ✓ Разные контроллеры используют одну форму")
+    print("  ✓ Логика отображения вынесена в контроллеры")
     print("=" * 60)
     print("Нажмите Ctrl+C для остановки сервера")
 
