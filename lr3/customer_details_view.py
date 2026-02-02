@@ -82,6 +82,11 @@ class CustomerDetailsView:
                                 Редактировать клиента
                             </a>
                         </div>
+                        <div class="col-md-6 mb-2">
+                            <button onclick="deleteCustomer({customer.customer_id})" class="btn btn-danger w-100">  <!-- КНОПКА УДАЛЕНИЯ ДОБАВЛЕНА -->
+                                Удалить клиента
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -93,6 +98,38 @@ class CustomerDetailsView:
             </div>
 
             <script>
+            function deleteCustomer(customerId) {{
+                if (confirm('Вы уверены, что хотите удалить этого клиента?')) {{
+                    const formData = new URLSearchParams();
+                    formData.append('id', customerId);
+
+                    fetch('/delete', {{
+                        method: 'POST',
+                        headers: {{
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        }},
+                        body: formData
+                    }})
+                    .then(response => response.json())
+                    .then(data => {{
+                        if (data.success) {{
+                            alert('Клиент #' + customerId + ' успешно удален');
+                            // Обновляем родительское окно (главную страницу)
+                            if (window.opener && !window.opener.closed) {{
+                                window.opener.location.reload();
+                            }}
+                            window.close();
+                        }} else {{
+                            alert('Ошибка при удалении: ' + data.error);
+                        }}
+                    }})
+                    .catch(error => {{
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при удалении');
+                    }});
+                }}
+            }}
+
             // При открытии в новой вкладке обновляем родительское окно через Observer
             window.onload = function() {{
                 try {{

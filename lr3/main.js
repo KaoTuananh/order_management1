@@ -1,6 +1,37 @@
 // Основной JavaScript для приложения
 let updateCounter = 0;
 
+function deleteCustomer(customerId) {  // НОВАЯ ФУНКЦИЯ
+    if (confirm('Вы уверены, что хотите удалить этого клиента?')) {
+        const formData = new URLSearchParams();
+        formData.append('id', customerId);
+
+        fetch('/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Клиент #${customerId} успешно удален`);
+                // Обновляем страницу через 1 секунду
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showNotification(`Ошибка при удалении: ${data.error}`, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Произошла ошибка при удалении', 'danger');
+        });
+    }
+}
+
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
@@ -35,7 +66,7 @@ window.addEventListener('message', function(event) {
     if (event.data && event.data.action === 'customer_details_opened') {
         console.log(`Получено сообщение об открытии деталей клиента #${event.data.customer_id}`);
         showNotification(`Детали клиента #${event.data.customer_id} открыты в отдельной вкладке`);
-    } else if (event.data && event.data.action === 'customer_updated') {  // ДОБАВЛЕНО
+    } else if (event.data && event.data.action === 'customer_updated') {
         console.log('Получено сообщение об обновлении клиента');
         showNotification('Данные клиента обновлены через паттерн Наблюдатель');
 

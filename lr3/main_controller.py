@@ -21,6 +21,8 @@ class MainController:
             return self.show_index(environ)
         elif path == '/get_customer_details':
             return self.get_customer_details(environ)
+        elif path == '/delete':  # НОВЫЙ МАРШРУТ
+            return self.delete_customer(environ)
         elif path == '/get_update_count':
             return self.get_update_count()
         else:
@@ -57,6 +59,45 @@ class MainController:
             return view.render_details(customer)
         else:
             return view.render_error("Клиент не найден")
+
+    def delete_customer(self, environ):  # НОВЫЙ МЕТОД
+        """Удалить клиента."""
+        if environ.get('REQUEST_METHOD') == 'POST':
+            try:
+                # Читаем тело запроса
+                try:
+                    request_body_size = int(environ.get('CONTENT_LENGTH', 0))
+                except ValueError:
+                    request_body_size = 0
+
+                if request_body_size > 0:
+                    request_body = environ['wsgi.input'].read(request_body_size)
+                    post_data = urllib.parse.parse_qs(request_body.decode('utf-8'))
+                else:
+                    post_data = {}
+
+                customer_id = int(post_data.get('id', [0])[0])
+
+                if self.repository.delete(customer_id):
+                    return self.view.render_json({
+                        'success': True,
+                        'message': 'Клиент успешно удален',
+                        'customer_id': customer_id
+                    })
+                else:
+                    return self.view.render_json({
+                        'success': False,
+                        'error': 'Клиент не найден'
+                    })
+            except Exception as e:
+                return self.view.render_json({
+                    'success': False,
+                    'error': str(e)
+                })
+        return self.view.render_json({
+            'success': False,
+            'error': 'Неверный метод запроса'
+        })
 
     def get_update_count(self):
         """Получить счетчик обновлений Observer."""

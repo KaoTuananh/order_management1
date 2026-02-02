@@ -32,7 +32,8 @@ class MainView(Observer):
                 <td>{customer.contact_person}</td>
                 <td>
                     <a href="/customer?id={customer.customer_id}" class="btn btn-info btn-sm" target="_blank">Просмотр</a>
-                    <a href="/edit?id={customer.customer_id}" class="btn btn-warning btn-sm">Редактировать</a>  <!-- КНОПКА РЕДАКТИРОВАНИЯ ДОБАВЛЕНА -->
+                    <a href="/edit?id={customer.customer_id}" class="btn btn-warning btn-sm">Редактировать</a>
+                    <button onclick="deleteCustomer({customer.customer_id})" class="btn btn-danger btn-sm">Удалить</button>  <!-- КНОПКА УДАЛЕНИЯ ДОБАВЛЕНА -->
                 </td>
             </tr>
             """

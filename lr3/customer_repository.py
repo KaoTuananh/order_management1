@@ -93,7 +93,7 @@ class CustomerRepository(Observable):
             print(f"Error adding customer: {e}")
             return False
 
-    def update(self, customer_id: int, customer_data: dict) -> bool:  # НОВЫЙ МЕТОД
+    def update(self, customer_id: int, customer_data: dict) -> bool:
         """Обновить клиента."""
         for i, customer in enumerate(self._customers):
             if customer.customer_id == customer_id:
@@ -119,6 +119,21 @@ class CustomerRepository(Observable):
                 except Exception as e:
                     print(f"Error updating customer: {e}")
                     return False
+        return False
+
+    def delete(self, customer_id: int) -> bool:  # НОВЫЙ МЕТОД
+        """Удалить клиента."""
+        for i, customer in enumerate(self._customers):
+            if customer.customer_id == customer_id:
+                deleted_customer = self._customers[i]
+                del self._customers[i]
+                self._save_data()
+                self.notify_observers({
+                    "action": "delete",
+                    "customer": deleted_customer,
+                    "customer_id": customer_id
+                })
+                return True
         return False
 
     def get_k_n_short_list(self, k: int, n: int,
